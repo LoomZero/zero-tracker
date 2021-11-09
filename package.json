@@ -1,0 +1,31 @@
+{
+  "name": "zero-tracker",
+  "version": "1.0.0",
+  "description": "",
+  "bin": {
+    "tracker2": "bin/tracker.js"
+  },
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LoomZero/zero-tracker.git"
+  },
+  "author": "LoomZero",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/LoomZero/zero-tracker/issues"
+  },
+  "homepage": "https://github.com/LoomZero/zero-tracker#readme",
+  "dependencies": {
+    "commander": "^8.3.0",
+    "jsonschema": "^1.4.0",
+    "moment": "^2.29.1",
+    "node-redmine": "^0.2.2",
+    "nodestrtotime": "^1.0.0",
+    "open": "^8.4.0",
+    "toggl-api": "^1.0.1"
+  }
+}

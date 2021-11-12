@@ -49,5 +49,14 @@ module.exports = class Config {
     Reflection.setDeep(this.config, name, value);
     return this;
   }
+
+  /**
+   * @param {string} name 
+   * @returns {this}
+   */
+  remove(name) {
+    Reflection.removeDeepRecursive(this.config, name);
+    return this;
+  }
   
 }

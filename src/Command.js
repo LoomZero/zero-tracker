@@ -2,9 +2,15 @@ module.exports = class Command {
 
   /**
    * @param {import('./Tracker')} tracker 
+   * @param {string} command
    */
-  constructor(tracker) {
+  constructor(tracker, command) {
     this.tracker = tracker;
+    this.command = command;
+  }
+
+  fallback(name, fallback = undefined) {
+    return this.tracker.config.get('commands.' + this.command + '.' + name, fallback);
   }
 
   /**
@@ -30,5 +36,13 @@ module.exports = class Command {
   }
 
   async action() {}
+
+  error(message) {
+    console.log('\x1b[31m' + message + '\x1b[0m');
+  }
+
+  isInt(value) {
+    return Number.parseInt(value) + '' === value;
+  }
 
 }

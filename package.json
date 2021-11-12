@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/LoomZero/zero-tracker#readme",
   "dependencies": {
+    "cli-table": "^0.3.6",
     "commander": "^8.3.0",
     "jsonschema": "^1.4.0",
     "moment": "^2.29.1",

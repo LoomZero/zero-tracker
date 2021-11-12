@@ -12,11 +12,19 @@ npm install -g https://github.com/LoomZero/zero-tracker.git
 
 ## 1.1. - WARNING: Please uninstall old tracker 
 
-```shell
+If installed via https://github.com/loomgmbh/node-tracker#install use:
+
+```bash
 cd ~/Custom/node/tracker
 npm unlink
 cd ..
 rm -rf tracker
+```
+
+If installed via `"npm install -g"` use:
+
+```bash
+npm uninstall -g node-tracker
 ```
 
 # 2. - Update
@@ -34,6 +42,6 @@ tracker redmine add
 ## 3.1. - Add another Redmine Connection via project
 
 - Create a project in toggl https://track.toggl.com/projects
-- Use `tracker redmine add` if you have already a fallback connection choose your project
+- Use `"tracker redmine add"` if you have already a fallback connection choose your project
 - Fill in all api parameters
-- Add project to trackings and use `tracker transmit`
+- Add project to trackings and use `"tracker transmit"`

@@ -14,7 +14,7 @@ npm install -g https://github.com/LoomZero/zero-tracker.git
 
 If installed via https://github.com/loomgmbh/node-tracker#install use:
 
-```bash
+```shell
 cd ~/Custom/node/tracker
 npm unlink
 cd ..
@@ -23,7 +23,7 @@ rm -rf tracker
 
 If installed via `"npm install -g"` use:
 
-```bash
+```shell
 npm uninstall -g node-tracker
 ```
 

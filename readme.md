@@ -3,6 +3,10 @@
 - [2. - Update](#2---update)
 - [3. - Add Redmine Connection](#3---add-redmine-connection)
   - [3.1. - Add another Redmine Connection via project](#31---add-another-redmine-connection-via-project)
+- [4. - Transmit Trackings](#4---transmit-trackings)
+  - [4.1. - Transmit Options](#41---transmit-options)
+- [5. - Change Config](#5---change-config)
+  - [5.1. - Add default option for command](#51---add-default-option-for-command)
 
 # 1. - Install
 
@@ -45,3 +49,11 @@ tracker redmine add
 - Use `"tracker redmine add"` if you have already a fallback connection choose your project
 - Fill in all api parameters
 - Add project to trackings and use `"tracker transmit"`
+
+# 4. - Transmit Trackings
+
+## 4.1. - Transmit Options
+
+# 5. - Change Config
+
+## 5.1. - Add default option for command

@@ -16,7 +16,12 @@ module.exports = class Config {
    */
   load() {
     if (FS.existsSync(this.path)) {
-      this.config = JSON.parse(FS.readFileSync(this.path));
+      try {
+        this.config = JSON.parse(FS.readFileSync(this.path)); 
+      } catch (e) {
+        console.log('Config "' + this.path + '" is not in valid JSON format.');
+        throw e;
+      }
     } else {
       this.config = {};
     }

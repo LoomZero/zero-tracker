@@ -10,8 +10,10 @@ const options = {
 };
 const tracker = new Tracker(options);
 
-try {
-  tracker.execute();
-} catch (e) {
-  console.error('Uncaught Error: ' + e.message);
-}
+(async () => {
+  try {
+    await tracker.execute();
+  } catch (e) {
+    tracker.onError(e);
+  }
+})();

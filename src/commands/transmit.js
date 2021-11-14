@@ -3,6 +3,18 @@ const Moment = require('moment');
 const Strtotime = require('nodestrtotime');
 const CLITable = require('../util/CLITable');
 
+/**
+ * @typedef {Object} T_TransmitItem
+ * @property {import('../../types').T_TogglTracking} tracking
+ * @property {number} [issue]
+ * @property {string} description
+ * @property {import('../connector/RedmineConnector')} redmine
+ * @property {string} state
+ * @property {number} [hours]
+ * @property {string} [comment]
+ * @property {number[]} [merged]
+ */
+
 module.exports = class TransmitCommand extends Command {
 
   /**
@@ -16,19 +28,13 @@ module.exports = class TransmitCommand extends Command {
       .option('--workspace [workspace]', 'Enter a workspace id', this.fallback('workspace', 'first'))
       .option('--mode <mode>', 'Enter a mode', this.fallback('mode', 'normal'))
       .option('--dry', 'Dry run', false)
+      .option('--round <round>', 'Round to x min', this.fallback('round', false))
+      .option('--merge', 'Merge tickets hours', this.fallback('merge', false))
       .usage('--from "-1 weeks" --to "now"')
       .description('transmit trackings from toggl to redmine');
   }
 
   async action() {
-    const table = new CLITable({
-      issue: 'Ticket',
-      comment: 'Comment',
-      activity: 'Activitiy',
-      hours: 'Hour`s',
-      project: 'Project',
-    });
-
     if (!this.tracker.config.get('redmine.fallback.api.apiKey')) {
       this.error('Please create a fallback redmine connection.');
       this.error('Use "tracker redmine add" to create a connection.');
@@ -40,6 +46,8 @@ module.exports = class TransmitCommand extends Command {
     if (workspace === null) return;
     await this.initTags(workspace);
 
+    /** @type {T_TransmitItem[]} */
+    const transmitting = [];
     const trackings = (await this.toggl.getTimeEntries(this.opts.from, this.opts.to)).filter((v) => {
       return v.stop !== undefined && (v.tags === undefined || (!v.tags.includes('t:transmitted') && !v.tags.includes('t:no-transmit')));
     });
@@ -51,15 +59,9 @@ module.exports = class TransmitCommand extends Command {
 
     for (const tracking of trackings) {
       const issuePattern = /#([0-9a-z-]+)/;
-      const commentPattern = / - (?!.* - )(.+)$/;
       let description = tracking.description || '';
       let issue = '';
-      let comment = '';
-
-      if (!this.opts.dry) console.log();
-      if (!this.opts.dry) console.log('[TRANSMIT]: ' + description + ' [' + tracking.id + ']');
       const redmine = await this.tracker.getRedmine(tracking.pid);
-      if (!this.opts.dry) console.log('SELECT PROJECT:', redmine.getName());
 
       const issueMatch = description.match(issuePattern);
       if (issueMatch && issueMatch[1]) {
@@ -91,49 +93,181 @@ module.exports = class TransmitCommand extends Command {
               console.log('Use "help" or "?" to show current help');
               return '';
             } else if (!['skip', 'ignore', 's', 'i'].includes(answer)) {
-              return 'Unknown command.'
+              return 'Unknown option.'
             }
           });
           if (issue === 'skip' || issue === 's') {
-            console.log('SKIP: ' + description + ' [' + tracking.id + ']');
+            transmitting.push({
+              tracking, description, redmine, state: 'skip'
+            });
             continue;
           }
           if (issue === 'ignore' || issue === 'i') {
-            console.log('IGNORE: ' + description + ' [' + tracking.id + ']');
             await this.toggl.addTag([tracking.id], ['t:no-transmit']);
+            transmitting.push({
+              tracking, description, redmine, state: 'ignore'
+            });
             continue;
           }
-        }
-      }
-
-      const commentMatch = description.match(commentPattern);
-      if (commentMatch && commentMatch[1]) {
-        comment = commentMatch[1].trim();
-      } else {
-        if (this.opts.dry && !issue) {
-          comment = '<no description>';
-          issue = '<no ticket>';
         } else {
-          comment = (await redmine.getIssue(issue)).subject;
+          transmitting.push({
+            tracking, description, redmine, state: 'skip / ignore',
+          });
+          continue;
         }
       }
-      
-      const hours = Math.round(tracking.duration / 36) / 100;
-      const activity = this.tracker.config.get('redmine.' + redmine.project + '.activity', 9);
-      const when = Moment.unix(Strtotime(tracking.start));
-      const customFields = this.getCustomFields(tracking);
 
-      if (!this.opts.dry) await redmine.createTimeEntry(issue, hours, activity, comment, when, customFields);
-      if (!this.opts.dry) await this.toggl.addTag([tracking.id], ['t:transmitted']);
-      if (this.opts.dry) {
-        table.add({issue, comment, activity, hours, project: redmine.getName()});
+      transmitting.push({
+        tracking, issue, description, redmine, state: 'transmit'
+      });
+    }
+
+    if (this.opts.merge) {
+      /** @type {T_TransmitItem[]} */
+      const merged = [];
+      for (const transmit of transmitting) {
+        if (transmit.state !== 'transmit') {
+          merged.push(transmit);
+          continue;
+        }
+        const index = merged.findIndex(v => v.issue === transmit.issue);
+        if (index !== -1) {
+          if (merged[index].comment === '') merged[index].comment = await this.getComment(transmit);
+          const hours = this.getHours(transmit.tracking);
+          merged[index].hours += hours;
+          merged[index].merged.push(hours);
+        } else {
+          transmit.hours = this.getHours(transmit.tracking);
+          transmit.comment = await this.getComment(transmit);
+          transmit.merged = [transmit.hours];
+          merged.push(transmit);
+        }
+      }
+      await this.doTransmit(merged);
+    } else {
+      await this.doTransmit(transmitting);
+    }
+  }
+
+  /**
+   * @param {T_TransmitItem} transmit 
+   * @returns {string}
+   */
+  async getComment(transmit) {
+    const commentPattern = / - (?!.* - )(.+)$/;
+    const commentMatch = transmit.description.match(commentPattern);
+
+    if (commentMatch && commentMatch[1]) {
+      return commentMatch[1].trim();
+    } else if (transmit.issue) {
+      return await (transmit.redmine.getIssue(transmit.issue)).subject;
+    } 
+    return '';
+  }
+
+  /**
+   * @param {import('../../types').T_TogglTracking} tracking 
+   * @returns {number}
+   */
+  getHours(tracking, total = false) {
+    return Math.round(tracking.duration / 36) / 100;
+  }
+
+  /**
+   * @param {number} hours 
+   * @returns {number}
+   */
+  preprocessHours(hours) {
+    if (this.opts.round) {
+      const round = Number.parseInt(this.opts.round) / 60;
+      const rounded = hours / round;
+
+      if (rounded === Number.parseInt(rounded + '')) {
+        return rounded * round;
       } else {
-        console.log('[TRANSMITTED]: ' + description + ' [' + tracking.id + '] - ' + comment);
+        return (Number.parseInt(rounded + '') + 1) * round;
       }
     }
-    if (this.opts.dry) {
-      table.log();
+    return hours;
+  }
+
+  /**
+   * @param {number} hours 
+   * @returns {number}
+   */
+  getShowHours(hours) {
+    return Math.round(hours * 100) / 100;
+  }
+
+  /**
+   * @param {number} hours 
+   * @returns {string}
+   */
+  getTime(hours) {
+    const split = (hours + '').split('.')
+    const min = Math.round(Number.parseFloat('0.' + split[1]) * 60);
+    return split[0] + ':' + (min < 10 ? '0' : '') + min;
+  }
+
+  /**
+   * @param {T_TransmitItem[]} transmitting
+   */
+  async doTransmit(transmitting) {
+    const header = this.tracker.config.get('commands.transmit.output', {
+      description: 'Tracking',
+      issue: 'Ticket',
+      comment: 'Comment',
+      activity: 'Activitiy',
+      hours: 'Hour`s',
+      when: 'When',
+      project: 'Project',
+      state: 'Status',
+      info: 'Info',
+    });
+
+    const table = new CLITable(header);
+    let totalSkipped = 0;
+    let total = 0;
+    for (const transmit of transmitting) {
+      const comment = transmit.comment ?? await this.getComment(transmit);
+      const hours = this.preprocessHours(transmit.hours ?? this.getHours(transmit.tracking));
+      const activity = this.tracker.config.get('redmine.' + transmit.redmine.project + '.activity', 9);
+      const when = Moment.unix(Strtotime(transmit.tracking.start));
+      const customFields = this.getCustomFields(transmit.tracking);
+
+      if (!this.opts.dry && transmit.state === 'transmit') {
+        await transmit.redmine.createTimeEntry(issue, hours, activity, comment, when, customFields);
+        await this.toggl.addTag([tracking.id], ['t:transmitted']);
+      }
+      if (transmit.state === 'transmit') {
+        total += hours;
+      } else {
+        totalSkipped += hours;
+      }
+      const item = {
+        description: transmit.description ? transmit.description : '<no description>',
+        issue: transmit.issue ? transmit.issue : '<no issue>',
+        comment: comment ? comment : '<no comment>',
+        activity, 
+        hours: this.getShowHours(hours) + ' (' + this.getTime(hours) + ')', 
+        when: when.format('HH:mm:SS DD.MM.YYYY'),
+        project: transmit.redmine.getName(),
+        state: transmit.state,
+      };
+      if (transmit.merged) item.info = transmit.merged.join(', ');
+      table.add(item);
     }
+    table.add(
+      {
+        activity: 'Total Skipped:',
+        hours: this.getShowHours(totalSkipped) + ' (' + this.getTime(totalSkipped) + ')',
+      },
+      {
+        activity: 'Total:',
+        hours: this.getShowHours(total) + ' (' + this.getTime(total) + ')',
+      },
+    );
+    table.log();
   }
 
   /**

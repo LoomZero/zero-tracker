@@ -10,7 +10,7 @@ module.exports = class Command {
   }
 
   fallback(name, fallback = undefined) {
-    return this.tracker.config.get('commands.' + this.command + '.' + name, fallback);
+    return this.tracker.config.get('commands.' + this.command + '.opts.' + name, fallback);
   }
 
   /**
@@ -31,7 +31,11 @@ module.exports = class Command {
     this.instance = args.pop();
     this.opts = args.pop();
 
-    await this.action(...args);
+    try {
+      await this.action(...args);
+    } catch (e) {
+      this.tracker.onError(e);
+    }
     this.tracker.exit();
   }
 

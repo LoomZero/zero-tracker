@@ -1,0 +1,86 @@
+{
+  "type": "object",
+  "properties": {
+    "toggl": {
+      "type": "object",
+      "properties": {
+        "api": {
+          "type": "object",
+          "properties": {
+            "apiUrl": {"type": "string"},
+            "apiToken": {"type": "string"}
+          },
+          "required": ["apiUrl", "apiToken"]
+        }
+      },
+      "required": ["api"]
+    },
+    "redmine": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "name": {"type": "string"},
+          "api": {
+            "type": "object",
+            "properties": {
+              "apiKey": {"type": "string"}
+            },
+            "required": ["apiKey"]
+          },
+          "hostname": {"type": "string"},
+          "port": {"type": ["string", "integer"]},
+          "activity": {"type": "integer"}
+        },
+        "required": ["name", "api", "hostname", "port"]
+      }
+    },
+    "commands": {
+      "type": "object",
+      "properties": {
+        "transmit": {
+          "type": "object",
+          "properties": {
+            "opts": {
+              "type": "object",
+              "properties": {
+                "from": {"type": "string"},
+                "to": {"type": "string"},
+                "workspace": {"type": "string"},
+                "mode": {"enum": ["normal"]},
+                "round": {"type": "integer"},
+                "merge": {"type": "boolean"}
+              },
+              "additionalProperties": false
+            },
+            "output": {
+              "type": "object",
+              "properties": {
+                "description": {"type": "string"},
+                "issue": {"type": "string"},
+                "comment": {"type": "string"},
+                "activity": {"type": "string"},
+                "hours": {"type": "string"},
+                "when": {"type": "string"},
+                "project": {"type": "string"},
+                "state": {"type": "string"},
+                "info": {"type": "string"}
+              },
+              "additionalProperties": false
+            }
+          }  
+        }
+      },
+      "additionalProperties": {
+        "type": ["object", "string"],
+        "properties": {
+          "opts": {
+            "type": "object",
+            "additionalProperties": {"type": "string"}
+          }
+        }
+      }
+    }
+  },
+  "required": ["toggl"]
+}

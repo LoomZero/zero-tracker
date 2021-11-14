@@ -70,7 +70,7 @@ module.exports = class Tracker {
     return this._redmine[project];
   }
 
-  execute() {
+  async execute() {
     for (const command in this.commands) {
       this.commands[command].doInit(program);
     }
@@ -79,7 +79,7 @@ module.exports = class Tracker {
       program.help();
     });
 
-    program.parse(process.argv);
+    await program.parse(process.argv);
   }
 
   exit() {
@@ -131,6 +131,23 @@ module.exports = class Tracker {
         res(answer);
       })
     });
+  }
+
+  /**
+   * @param {Error} error
+   */
+  onError(error) {
+    console.error('Uncaught Error: ' + error);
+    console.log();
+    console.log('Auto check config for better debug:')
+    try {
+      this.commands.config.testConfig();
+    } catch (configError) {
+      this.commands.config.error('Error by checking the config.');
+      console.log(configError);
+    } 
+    console.log();
+    throw error;
   }
 
 }

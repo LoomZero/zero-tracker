@@ -40,10 +40,10 @@ module.exports = class ConfigCommand extends Command {
     }
     if (this.checkSchema(this.tracker.config.config, schema)) {
       console.log();
-      console.log('The config is valid.');
+      console.log('The config is valid. \x1b[32m\u2713\x1b[0m');
     } else {
       console.log();
-      this.error('The config is not valid!');
+      this.error('The config is not valid! \u2718');
     }
     console.log();
   }

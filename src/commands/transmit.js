@@ -29,7 +29,7 @@ module.exports = class TransmitCommand extends Command {
       .command('transmit')
       .option('--from <from>', 'Enter a date string for from', this.fallback('from', '-1 days'))
       .option('--to <to>', 'Enter a date string for to', this.fallback('to', 'now'))
-      .option('--workspace [workspace]', 'Enter a workspace id', this.fallback('workspace', 'first'))
+      .option('--workspace <workspace>', 'Enter a workspace id', this.fallback('workspace', 'first'))
       .option('--mode <mode>', 'Enter a mode', this.fallback('mode', 'normal'))
       .option('--dry', 'Dry run', false)
       .option('--round <round>', 'Round to x min', this.fallback('round', false))

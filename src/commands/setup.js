@@ -1,5 +1,4 @@
 const Command = require('../Command');
-const JSONSchemaValidate = require('jsonschema').validate;
 
 module.exports = class SetupCommand extends Command {
 

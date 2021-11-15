@@ -1,5 +1,6 @@
 const Path = require('path');
 const FS = require('fs');
+const OS = require('os');
 const program = require('commander');
 const TogglConnector = require('./connector/TogglConnector');
 const Config = require('./util/Config');
@@ -23,7 +24,8 @@ module.exports = class Tracker {
   /** @returns {Config} */
   get config() {
     if (this._config === null) {
-      this._config = new Config(this.path('config/config.json'));
+      this.ensureHome();
+      this._config = new Config(Path.join(OS.homedir(), '.zero-tracker/config.json'));
     }
     return this._config;
   }
@@ -39,6 +41,12 @@ module.exports = class Tracker {
       this._commands[Path.parse(command).name] = new subject(this, Path.parse(command).name);
     }
     return this._commands;
+  }
+
+  ensureHome() {
+    if (!FS.existsSync(Path.join(OS.homedir(), '.zero-tracker'))) {
+      FS.mkdirSync(Path.join(OS.homedir(), '.zero-tracker'));
+    }
   }
 
   path(...args) {

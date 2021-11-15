@@ -16,7 +16,7 @@ module.exports = class ConfigCommand extends Command {
     switch (action) {
       case 'edit':
         console.log('Please use "tracker config test" after edit the config file.');
-        console.log('Edit this file: ' + this.tracker.path('config/config.json'));
+        console.log('Edit this file: ' + this.tracker.config.path);
         break;
       case 'show':
         console.log(JSON.stringify(this.tracker.config.config, null, '  '));

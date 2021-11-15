@@ -62,7 +62,3 @@ typings/
 
 # IntelliJ
 .idea
-
-# custom
-config/*
-!config/.gitkeep

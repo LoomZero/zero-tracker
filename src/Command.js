@@ -7,6 +7,7 @@ module.exports = class Command {
   constructor(tracker, command) {
     this.tracker = tracker;
     this.command = command;
+    this.opts = {};
   }
 
   fallback(name, fallback = undefined) {

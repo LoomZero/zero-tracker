@@ -137,7 +137,7 @@ module.exports = class RedmineCommand extends Command {
     const workspaces = await this.toggl.getWorkspaces();
     switch (this.opts.workspace) {
       case 'select':
-        if (workspaces.length > 1 || true) {
+        if (workspaces.length > 1) {
           console.log('Workspaces:');
           const ids = workspaces.map((v) => {
             console.log(' - ' + v.id + ' "' + v.name + '"');

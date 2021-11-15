@@ -113,7 +113,7 @@ Use `select` to interactive select the workspace ID. If only 1 workspace is defi
 Use `first` to select always the first workspace defined in toggl.
 Use `<number>` to select a workspace by its ID.
 
-> Config: `commands.transmit.opts.workspace`
+> Config: `commands.redmine.opts.workspace`
 
 > Type: `int, string, enum(select, first)`
 

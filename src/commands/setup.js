@@ -28,6 +28,8 @@ module.exports = class SetupCommand extends Command {
       installing = true;
     }
 
+    this.tracker.handler.emit('setup');
+
     if (installing) {
       console.log('Now you are ready to track anything');
       console.log('\uD83D\uDE00\u23F1  Happy tracking  \u23F1 \uD83D\uDE00');

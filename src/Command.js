@@ -33,6 +33,8 @@ module.exports = class Command {
     this.opts = args.pop();
 
     try {
+      this.tracker.handler.emit('action', this.command, this, args);
+      this.tracker.handler.emit('action:' + this.command, this, args);
       await this.action(...args);
     } catch (e) {
       this.tracker.onError(e);

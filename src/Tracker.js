@@ -1,6 +1,7 @@
 const Path = require('path');
 const FS = require('fs');
 const OS = require('os');
+const Handler = require('events');
 const program = require('commander');
 const TogglConnector = require('./connector/TogglConnector');
 const Config = require('./util/Config');
@@ -19,6 +20,7 @@ module.exports = class Tracker {
     this._config = null;
     this._toggl = null;
     this._redmine = {};
+    this.handler = new Handler();
   }
 
   /** @returns {Config} */
@@ -46,6 +48,7 @@ module.exports = class Tracker {
   ensureHome() {
     if (!FS.existsSync(Path.join(OS.homedir(), '.zero-tracker'))) {
       FS.mkdirSync(Path.join(OS.homedir(), '.zero-tracker'));
+      this.handler.emit('ensure');
     }
   }
 
@@ -83,14 +86,19 @@ module.exports = class Tracker {
       this.commands[command].doInit(program);
     }
 
+    const argv = process.argv;
+
+    this.handler.emit('init', program, argv);
+
     program.on('command:*', () => {
       program.help();
     });
 
-    await program.parse(process.argv);
+    await program.parse(argv);
   }
 
   exit() {
+    this.handler.emit('exit');
     process.exit(0);
   }
 
@@ -155,6 +163,7 @@ module.exports = class Tracker {
       console.log(configError);
     } 
     console.log();
+    this.handler.emit('error', error);
     throw error;
   }
 

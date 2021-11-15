@@ -78,7 +78,7 @@
         "properties": {
           "opts": {
             "type": "object",
-            "additionalProperties": {"type": "string"}
+            "additionalProperties": {"type": ["string", "number", "boolean"]}
           }
         }
       }

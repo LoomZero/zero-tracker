@@ -19,7 +19,7 @@ module.exports = class ConfigCommand extends Command {
         console.log('Please use "tracker config test" after edit the config file.');
         console.log('Edit this file: ' + this.tracker.config.path);
         console.log();
-        console.log('For more infos see: https://github.com/LoomZero/zero-tracker#10---change-config');
+        console.log('For more infos see: https://github.com/LoomZero/zero-tracker#4---change-config');
         console.log();
         break;
       case 'show':

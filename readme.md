@@ -83,6 +83,8 @@ tracker redmine add
 
 Edit the config file and use `tracker config test` after saving.
 
+For help see [10. - Change Config](#10---change-config).
+
 ## 5.2. - ARGUMENT: `show` - Show the current config
 
 ## 5.3. - ARGUMENT: `test` - Test the current config
@@ -211,4 +213,34 @@ Transmit the trackings without asking.
 
 # 10. - Change Config
 
+Change the config by using the `tracker config edit` command to see the path of config file.
+
+Please use `tracker config test` after changing the config file.
+
 ## 10.1. - Add default option for command
+
+You can define default Options for all commands by defining a value in the config file using the pattern.
+
+Pattern: `command.<command>.opts.<option> = <value>`
+
+> `<command>` - The name of the command (e.g. `transmit`)
+
+> `<option>` - The name of the option (e.g. `round`)
+
+> `<value>` - The value of the option (e.g. `30`)
+
+_Example: config.json - Use `transmit` command always with `round=30` and `merge` options_
+```json
+{ 
+  ...
+  "commands": {
+    "transmit": {
+      "opts": {
+        "round": 30,
+        "merge": true
+      }
+    }
+  }
+  ...
+}
+```

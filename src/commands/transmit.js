@@ -1,7 +1,9 @@
 const Command = require('../Command');
 const Moment = require('moment');
 const Strtotime = require('nodestrtotime');
-const CLITable = require('../util/CLITable');
+const Input = require('zero-kit/src/cli/Input');
+const Color = require('zero-kit/src/cli/Color');
+const CLITable = require('zero-kit/src/cli/CLITable');
 
 /**
  * @typedef {Object} T_TransmitItem
@@ -42,8 +44,8 @@ module.exports = class TransmitCommand extends Command {
 
   async action() {
     if (!this.tracker.config.get('redmine.fallback.api.apiKey')) {
-      this.error('Please create a fallback redmine connection.');
-      this.error('Use "tracker redmine add" to create a connection.');
+      Color.log('error', 'Please create a fallback redmine connection.');
+      Color.log('error', 'Use "{command}" to create a connection.', {command: 'tracker redmine add'});
       return;
     }
 
@@ -52,7 +54,7 @@ module.exports = class TransmitCommand extends Command {
         if (this.opts.force === 's') this.opts.force = 'skip';
         if (this.opts.force === 'i') this.opts.force = 'ignore';
       } else {
-        this.error('Only "skip" or "ignore" are valid values for option --force');
+        Color.log('error', 'Only {skip} or {ignore} are valid values for option {force}', {skip: 'skip', ignore: 'ignore', force: '--force'});
         return;
       }
     }
@@ -69,7 +71,10 @@ module.exports = class TransmitCommand extends Command {
     });
 
     if (trackings.length === 0) {
-      console.log('No time entries in this time range (' + Moment.unix(Strtotime(this.opts.from)).format('HH:mm:SS DD.MM.YYYY') + ' - ' + Moment.unix(Strtotime(this.opts.to)).format('HH:mm:SS DD.MM.YYYY') + ')');
+      Color.log('section.warning', 'No time entries in this time range {from} - {to}', {
+        from: Moment.unix(Strtotime(this.opts.from)).format('HH:mm:SS DD.MM.YYYY'),
+        to: Moment.unix(Strtotime(this.opts.to)).format('HH:mm:SS DD.MM.YYYY'),
+      });
       return;
     }
 
@@ -88,7 +93,7 @@ module.exports = class TransmitCommand extends Command {
             issue = this.opts.force;
           } else {
             console.log('No issue ID found on tracking "' + description + ' [' + tracking.id + ']"');
-            issue = await this.tracker.input('Issue Number (#/s/i/?): ', async (answer) => {
+            issue = await Input.input('Issue Number (#/s/i/?): ', {validate: async (answer) => {
               if (this.isInt(answer)) {
                 try {
                   console.log('Ticket: ' + (await redmine.getIssue(Number.parseInt(answer))).subject);
@@ -98,7 +103,7 @@ module.exports = class TransmitCommand extends Command {
                     return 'This issue is not known.';
                   }
                 }
-                if (await this.tracker.input('Is this the ticket? (y/n): ') !== 'y') {
+                if (await Input.input('Is this the ticket? (y/n): ', Input.optionsBoolean())) {
                   return 'abort';
                 } else {
                   description = '#' + answer + ' - ' + description;
@@ -114,7 +119,7 @@ module.exports = class TransmitCommand extends Command {
               } else if (!['skip', 'ignore', 's', 'i'].includes(answer)) {
                 return 'Unknown option.'
               }
-            });
+            }});
           }
           if (issue === 'skip' || issue === 's') {
             transmitting.push({
@@ -254,14 +259,14 @@ module.exports = class TransmitCommand extends Command {
     }
 
     const header = this.tracker.config.get('commands.transmit.output', {
+      state: 'Status',
       description: 'Tracking',
       issue: 'Ticket',
       comment: 'Comment',
       activity: 'Activitiy',
       hours: 'Hour`s',
       when: 'When',
-      project: 'Project',
-      state: 'Status',
+      project: 'Redmine (Project)',
       info: 'Info',
     });
 
@@ -297,6 +302,7 @@ module.exports = class TransmitCommand extends Command {
         if (transmit.customFields.length) item.info = (item.info ? item.info + ', ' : '') + this.getCustomFieldsInfo(transmit.customFields);
         table.add(item);
       }
+      table.add([]);
       table.add(
         ['Total Skipped:', this.getShowHours(totalSkipped) + ' (' + this.getTime(totalSkipped) + ')'],
         ['Total:', this.getShowHours(total) + ' (' + this.getTime(total) + ')'],
@@ -306,8 +312,8 @@ module.exports = class TransmitCommand extends Command {
     if (this.opts.dry) return;
     if (!this.opts.yes) {
       console.log();
-      if (await this.tracker.input('Is this ok? (y/n): ') !== 'y') {
-        this.error('Abort');
+      if (!await Input.input('Is this ok? (y/n): ', Input.optionsBoolean())) {
+        Color.log('section.abort', 'Abort');
         return;
       }
     } 
@@ -330,7 +336,7 @@ module.exports = class TransmitCommand extends Command {
             }
             console.log(this.colorGreen('transmitted'));
           } catch (error) {
-            this.error('error');
+            Color.log('error', 'Error WIP');
             errors.push({error, transmit});
           }
         } else {
@@ -341,6 +347,7 @@ module.exports = class TransmitCommand extends Command {
         }
       }
     }
+    Color.log('section.success', 'Finished');
   }
 
   /**
@@ -432,19 +439,19 @@ module.exports = class TransmitCommand extends Command {
             console.log(' - ' + v.id + ' "' + v.name + '"');
             return v.id;
           });
-          const id = await this.tracker.input('Select (write the ID): ', (answer) => {
+          const id = await Input.input('Select (write the ID): ', {validate: (answer) => {
             const id = Number.parseInt(answer);
             if (ids.includes(id)) return true;
             return 'Please select a valid ID.';
-          });
+          }});
           console.log('Select workspace:', id);
           return Number.parseInt(id);
         }
       case 'first':
         return workspaces.shift().id;
       default: 
-        this.error('Unknown option for workspace option.');
-        return null;   
+        Color.log('error', 'Unknown option for workspace option.');
+        return null;
     }
   }
 

@@ -20,13 +20,15 @@
   },
   "homepage": "https://github.com/LoomZero/zero-tracker#readme",
   "dependencies": {
-    "cli-table": "^0.3.6",
+    "cli-table": "^0.3.7",
     "commander": "^8.3.0",
     "jsonschema": "^1.4.0",
     "moment": "^2.29.1",
     "node-redmine": "^0.2.2",
     "nodestrtotime": "^1.0.0",
     "open": "^8.4.0",
-    "toggl-api": "^1.0.1"
+    "string-similarity": "^4.0.4",
+    "toggl-api": "^1.0.1",
+    "zero-kit": "git+https://github.com/LoomZero/zero-kit.git#master"
   }
 }

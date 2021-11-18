@@ -1,4 +1,5 @@
 const Command = require('../Command');
+const Zero = require('zero-kit');
 
 module.exports = class SetupCommand extends Command {
 
@@ -13,6 +14,7 @@ module.exports = class SetupCommand extends Command {
 
   async action() {
     console.log('Wellcome to zero-tracker setup.');
+    await Zero.setup();
     let installing = false;
     let toggl = !this.tracker.config.get('toggl.api.apiToken');
     let redmine = !this.tracker.config.get('redmine.fallback.api.apiKey');
@@ -27,8 +29,6 @@ module.exports = class SetupCommand extends Command {
       await this.tracker.commands.redmine.add();
       installing = true;
     }
-
-    this.tracker.handler.emit('setup');
 
     if (installing) {
       console.log('Now you are ready to track anything');

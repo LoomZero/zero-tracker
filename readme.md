@@ -258,6 +258,7 @@ This change the output table. You can remove or rename columns.
 
 ```json
 {
+  "state": "Status",
   "description": "Tracking",
   "issue": "Ticket",
   "comment": "Comment",
@@ -265,7 +266,6 @@ This change the output table. You can remove or rename columns.
   "hours": "Hour`s",
   "when": "When",
   "project": "Project",
-  "state": "Status",
   "info": "Info"
 }
 ```

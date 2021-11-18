@@ -1,3 +1,5 @@
+const Zero = require('zero-kit');
+
 module.exports = class Command {
 
   /**
@@ -33,8 +35,8 @@ module.exports = class Command {
     this.opts = args.pop();
 
     try {
-      this.tracker.handler.emit('action', this.command, this, args);
-      this.tracker.handler.emit('action:' + this.command, this, args);
+      Zero.handler.emit('action', this.command, this, args);
+      Zero.handler.emit('action:' + this.command, this, args);
       await this.action(...args);
     } catch (e) {
       this.tracker.onError(e);
@@ -43,10 +45,6 @@ module.exports = class Command {
   }
 
   async action() {}
-
-  error(message) {
-    console.log('\x1b[31m' + message + '\x1b[0m');
-  }
 
   isInt(value) {
     return Number.parseInt(value) + '' === value;

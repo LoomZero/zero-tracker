@@ -1,7 +1,8 @@
 const Command = require('../Command');
 const Open = require('open');
-// const CLITable = require('cli-table');
-const CLITable = require('../util/CLITable');
+const Input = require('zero-kit/src/cli/Input');
+const Color = require('zero-kit/src/cli/Color');
+const CLITable = require('zero-kit/src/cli/CLITable');
 
 module.exports = class RedmineCommand extends Command {
 
@@ -24,8 +25,8 @@ module.exports = class RedmineCommand extends Command {
       case 'remove':
         return await this.remove();
       default:
-        this.error('Invalid argument <action>');
-        this.error('Valid options are: show, add, remove');
+        Color.log('error', 'Invalid argument <action>');
+        Color.log('error', 'Valid options are: {options}', {options: 'show, add, remove'});
         break;
     }
   }
@@ -60,10 +61,12 @@ module.exports = class RedmineCommand extends Command {
       ids.push(id);
     }
     table.log();
-    const id = await this.tracker.input('Choose Project ID: ', (answer) => {
-      if (!ids.includes(answer)) {
-        return 'Invalid project ID';
-      }
+    const id = await Input.input('Choose Project ID: ', {
+      validate: (answer) => {
+        if (!ids.includes(answer)) {
+          return 'Invalid project ID';
+        }
+      },
     });
 
     this.tracker.config.remove('redmine.' + id);
@@ -91,7 +94,7 @@ module.exports = class RedmineCommand extends Command {
         table.add([project.id, project.name]);
       }
       table.log();
-      await this.tracker.input('Select Project ID: ', (answer) => {
+      await Input.input('Select Project ID: ', {validate: (answer) => {
         if (this.isInt(answer)) {
           answer = Number.parseInt(answer);
           const item = projects.find(v => v.id === answer);
@@ -104,28 +107,19 @@ module.exports = class RedmineCommand extends Command {
         } else {
           return 'Please enter the project ID.';
         }
-      });
+      }});
     }
 
     if (this.tracker.config.get('redmine.' + project + '.api.apiKey')) {
       console.log('You already have a connection for ' + name);
-      const input = await this.tracker.input('Overwrite? (y/n): ');
-      if (input !== 'y') {
-        return;
-      }
+      if (!await Input.input('Overwrite? (y/n): ', Input.optionsBoolean())) return;
     }
 
     if (project === 'fallback') Open('https://redmine.loom.de/my/account');
     this.tracker.config.set('redmine.' + project + '.name', name);
-    this.tracker.config.set('redmine.' + project + '.api.apiKey', await this.tracker.input('[apiKey] Please enter Redmine API Key (Can be found on the right hand side of your Redmine account page): ', (answer) => {
-      if (answer.length === 0) return 'Required';
-    }));
-    this.tracker.config.set('redmine.' + project + '.hostname', await this.tracker.input('[hostname] Please enter the Redmine Hostname (Select "https://redmine.loom.de" for LOOM redmine): ', (answer) => {
-      if (answer.length === 0) return 'Required';
-    }));
-    this.tracker.config.set('redmine.' + project + '.port', await this.tracker.input('[port] Please enter the Redmine Port (Select "443" for LOOM redmine): ', (answer) => {
-      if (answer.length === 0) return 'Required';
-    }));
+    this.tracker.config.set('redmine.' + project + '.api.apiKey', await Input.input('[apiKey] Please enter Redmine API Key (Can be found on the right hand side of your Redmine account page): ', Input.optionsNotEmpty()));
+    this.tracker.config.set('redmine.' + project + '.hostname', await Input.input('[hostname] Please enter the Redmine Hostname (Select "https://redmine.loom.de" for LOOM redmine): ', Input.optionsNotEmpty()));
+    this.tracker.config.set('redmine.' + project + '.port', await Input.input('[port] Please enter the Redmine Port (Select "443" for LOOM redmine): ', Input.optionsNotEmpty()));
     this.tracker.config.save();
   }
 
@@ -143,18 +137,18 @@ module.exports = class RedmineCommand extends Command {
             console.log(' - ' + v.id + ' "' + v.name + '"');
             return v.id;
           });
-          const id = await this.tracker.input('Select (write the ID): ', (answer) => {
+          const id = await Input.input('Select (write the ID): ', {validate: (answer) => {
             const id = Number.parseInt(answer);
             if (ids.includes(id)) return true;
             return 'Please select a valid ID.';
-          });
+          }});
           console.log('Select workspace:', id);
           return Number.parseInt(id);
         }
       case 'first':
         return workspaces.shift().id;
       default: 
-        this.error('Unknown option for workspace option.');
+        Color.log('error', 'Unknown option for workspace option.');
         return null;   
     }
   }

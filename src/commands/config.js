@@ -1,5 +1,6 @@
 const Command = require('../Command');
-const JSONSchemaValidate = require('jsonschema').validate;
+const Color = require('zero-kit/src/cli/Color');
+const JSONSchema = require('zero-kit/src/util/JSONSchema');
 
 module.exports = class ConfigCommand extends Command {
 
@@ -16,21 +17,21 @@ module.exports = class ConfigCommand extends Command {
     switch (action) {
       case 'edit':
         console.log();
-        console.log('Please use "tracker config test" after edit the config file.');
-        console.log('Edit this file: ' + this.tracker.config.path);
+        Color.log('info', 'Please use {command} after edit the config file.', {command: 'tracker config test'})
+        Color.log('info', 'Edit this file: {file}', {file: this.tracker.config.path})
         console.log();
-        console.log('For more infos see: https://github.com/LoomZero/zero-tracker#4---change-config');
+        Color.log('info', 'For more infos see: {url}', {url: 'https://github.com/LoomZero/zero-tracker#4---change-config'});
         console.log();
         break;
       case 'show':
-        console.log(JSON.stringify(this.tracker.config.config, null, '  '));
+        console.log(JSON.stringify(this.tracker.config.data, null, '  '));
         break;
       case 'test':
         this.testConfig();
         break;
       default:
-        this.error('Invalid argument <action>');
-        this.error('Valid options are: edit, show, test');
+        Color.log('error', 'Invalid argument <action>');
+        Color.log('error', 'Valid options are: {options}', {options: 'edit, show, test'});
         break;
     }
   }
@@ -39,40 +40,26 @@ module.exports = class ConfigCommand extends Command {
     const schema = require(this.tracker.path('schema/config.schema.json'));
 
     if (this.tracker.config.config === null) {
-      this.error('Error: No config loaded.');
+      Color.log('error', 'Error: No config loaded.');
       return;
     }
-    if (this.checkSchema(this.tracker.config.config, schema)) {
-      console.log();
-      console.log('The config is valid. \x1b[32m\u2713\x1b[0m');
+    
+    if (this.checkSchema(this.tracker.config.data, schema)) {
+      Color.log('section.success', 'The config is valid. \u2713');
     } else {
-      console.log();
-      this.error('The config is not valid! \u2718');
+      Color.log('section.abort', 'The config is not valid! \u2718');
     }
-    console.log();
   }
 
   /**
    * @param {object} object 
    * @param {object} schema 
-   * @param {function} onError 
    * @returns {boolean}
    */
-  checkSchema(object, schema, onError = null) {
-    const result = JSONSchemaValidate(object, schema);
-    if (result.errors && result.errors.length) {
-      if (typeof onError === 'function') {
-        onError(result);
-      } else {
-        console.log();
-        this.error('Errors:');
-        for (const error of result.errors) {
-          this.error('- "' + error.path.join('.') + '" ' + error.message);
-        }
-      }
-      return false;
-    }
-    return true;
+  checkSchema(object, schema) {
+    const jsonschema = new JSONSchema(schema);
+    const results = jsonschema.logResults(object);
+    return results.valid;
   }
 
 }

@@ -1,12 +1,11 @@
 const Path = require('path');
 const FS = require('fs');
-const OS = require('os');
-const Handler = require('events');
 const program = require('commander');
 const TogglConnector = require('./connector/TogglConnector');
-const Config = require('./util/Config');
-const Readline = require('readline');
 const RedmineConnector = require('./connector/RedmineConnector');
+const JSONFile = require('zero-kit/src/util/JSONFile');
+const Zero = require('zero-kit');
+const Color = require('zero-kit/src/cli/Color');
 
 module.exports = class Tracker {
 
@@ -20,14 +19,15 @@ module.exports = class Tracker {
     this._config = null;
     this._toggl = null;
     this._redmine = {};
-    this.handler = new Handler();
+
+    Zero.setApp('tracker', 'zero-tracker', this);
+    Zero.setup();
   }
 
-  /** @returns {Config} */
+  /** @returns {JSONFile} */
   get config() {
     if (this._config === null) {
-      this.ensureHome();
-      this._config = new Config(Path.join(OS.homedir(), '.zero-tracker/config.json'));
+      this._config = new JSONFile(Zero.storage.path('config.json'));
     }
     return this._config;
   }
@@ -45,13 +45,10 @@ module.exports = class Tracker {
     return this._commands;
   }
 
-  ensureHome() {
-    if (!FS.existsSync(Path.join(OS.homedir(), '.zero-tracker'))) {
-      FS.mkdirSync(Path.join(OS.homedir(), '.zero-tracker'));
-      this.handler.emit('ensure');
-    }
-  }
-
+  /**
+   * @param  {...string} args 
+   * @returns {string}
+   */
   path(...args) {
     return Path.join(this.options.root, ...args);
   }
@@ -88,7 +85,7 @@ module.exports = class Tracker {
 
     const argv = process.argv;
 
-    this.handler.emit('init', program, argv);
+    Zero.handler.emit('init', program, argv);
 
     program.on('command:*', () => {
       program.help();
@@ -98,55 +95,8 @@ module.exports = class Tracker {
   }
 
   exit() {
-    this.handler.emit('exit');
+    Zero.handler.emit('exit');
     process.exit(0);
-  }
-
-  /**
-   * @param {string} message 
-   * @param {import('../types').C_InputValidate} validate
-   * @returns {string}
-   */
-  async input(message, validate = null) {
-    let valid = false;
-    let answer = '';
-    do {
-      answer = await this.doInput(message);
-      if (validate === null) {
-        valid = true;
-      } else {
-        const error = await validate(answer);
-        if (typeof error === 'string') {
-          console.log('\x1b[31m' + error + '\x1b[0m');
-          valid = false;
-        } else if (error === false) {
-          console.log('\x1b[31mERROR\x1b[0m');
-          valid = false;
-        } else {
-          valid = true;
-        }
-      }
-    } while (!valid);
-    return answer;
-  } 
-
-  /**
-   * @param {string} message 
-   * @returns {string}
-   */
-  doInput(message) {
-    const readline = Readline.createInterface({
-      input: process.stdin,
-      output: process.stdout,
-    });
-
-    return new Promise((res, rej) => {
-      readline.question('\x1b[32m' + message + '\x1b[36m', (answer) => {
-        process.stdout.write('\x1b[0m');
-        readline.close();
-        res(answer);
-      })
-    });
   }
 
   /**
@@ -159,11 +109,11 @@ module.exports = class Tracker {
     try {
       this.commands.config.testConfig();
     } catch (configError) {
-      this.commands.config.error('Error by checking the config.');
+      Color.log('error', 'Error by checking the config.');
       console.log(configError);
     } 
     console.log();
-    this.handler.emit('error', error);
+    Zero.handler.emit('error', error);
     throw error;
   }
 

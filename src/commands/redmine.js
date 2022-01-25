@@ -117,6 +117,7 @@ module.exports = class RedmineCommand extends Command {
 
     if (project === 'fallback') Open('https://redmine.loom.de/my/account');
     this.tracker.config.set('redmine.' + project + '.name', name);
+    this.tracker.config.set('redmine.' + project + '.id', project);
     this.tracker.config.set('redmine.' + project + '.api.apiKey', await Input.input('[apiKey] Please enter Redmine API Key (Can be found on the right hand side of your Redmine account page): ', Input.optionsNotEmpty()));
     this.tracker.config.set('redmine.' + project + '.hostname', await Input.input('[hostname] Please enter the Redmine Hostname (Select "https://redmine.loom.de" for LOOM redmine): ', Input.optionsNotEmpty()));
     this.tracker.config.set('redmine.' + project + '.port', await Input.input('[port] Please enter the Redmine Port (Select "443" for LOOM redmine): ', Input.optionsNotEmpty()));

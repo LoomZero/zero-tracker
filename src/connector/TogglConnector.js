@@ -3,6 +3,7 @@ const TogglClient = require('toggl-api');
 const Moment = require('moment');
 const Strtotime = require('nodestrtotime');
 const Connector = require('../Connector');
+const Input = require('zero-kit/src/cli/Input');
 
 module.exports = class TogglConnector extends Connector {
 
@@ -18,9 +19,9 @@ module.exports = class TogglConnector extends Connector {
     if (!this.tracker.config.get('toggl.api.apiToken')) {
       Open('https://toggl.com/app/profile');
 
-      const key = await this.tracker.input('Please enter Toggl API Key (Can be found on bottom of your Toggl account page): ', (answer) => {
+      const key = await Input.input('Please enter Toggl API Key (Can be found on bottom of your Toggl account page): ', {validate: (answer) => {
         if (answer.length === 0) return 'Required';
-      });
+      }})
 
       this.tracker.config
         .set('toggl.api.apiToken', key)

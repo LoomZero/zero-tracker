@@ -4,6 +4,7 @@ const Strtotime = require('nodestrtotime');
 const Input = require('zero-kit/src/cli/Input');
 const Color = require('zero-kit/src/cli/Color');
 const CLITable = require('zero-kit/src/cli/CLITable');
+const RedmineError = require('../error/RedmineError');
 
 /**
  * @typedef {Object} T_TransmitItem
@@ -19,6 +20,7 @@ const CLITable = require('zero-kit/src/cli/CLITable');
  * @property {string[]} [info]
  * @property {number} [activity]
  * @property {any} [customFields]
+ * @property {import('../error/TrackerError')} [error]
  */
 
 module.exports = class TransmitCommand extends Command {
@@ -43,11 +45,7 @@ module.exports = class TransmitCommand extends Command {
   }
 
   async action() {
-    if (!this.tracker.config.get('redmine.fallback.api.apiKey')) {
-      Color.log('error', 'Please create a fallback redmine connection.');
-      Color.log('error', 'Use "{command}" to create a connection.', {command: 'tracker redmine add'});
-      return;
-    }
+    this.tracker.checkRedmine();
 
     if (this.opts.force) {
       if (['skip', 's', 'ignore', 'i'].includes(this.opts.force)) {
@@ -59,6 +57,7 @@ module.exports = class TransmitCommand extends Command {
       }
     }
 
+    this.tracker.debug('Ready and init for transmit');
     this.toggl = await this.tracker.getToggl();
     const workspace = await this.getWorkspace();
     if (workspace === null) return;
@@ -78,18 +77,23 @@ module.exports = class TransmitCommand extends Command {
       return;
     }
 
+    this.tracker.debug('Start transmit validation');
     for (const tracking of trackings) {
       const issuePattern = /#([0-9a-z-]+)/;
       let description = tracking.description || '';
       let issue = '';
       const redmine = await this.tracker.getRedmine(tracking.pid);
 
+      this.tracker.debug('Try find the issue {context}', {}, {description});
       const issueMatch = description.match(issuePattern);
       if (issueMatch && issueMatch[1]) {
         issue = issueMatch[1];
+        this.tracker.debug('Found issue id {context}', {}, {issue});
       }  else {
+        this.tracker.debug('Not found issue id {context}', {}, {description, dry: this.opts.dry});
         if (!this.opts.dry) {
           if (this.opts.force) {
+            this.tracker.debug('Force execution {context}', {}, {force: this.opts.force});
             issue = this.opts.force;
           } else {
             console.log('No issue ID found on tracking "' + description + ' [' + tracking.id + ']"');
@@ -123,13 +127,13 @@ module.exports = class TransmitCommand extends Command {
           }
           if (issue === 'skip' || issue === 's') {
             transmitting.push({
-              tracking, description, redmine, state: 'skip'
+              tracking, description, redmine, state: 'skip',
             });
             continue;
           }
           if (issue === 'ignore' || issue === 'i') {
             transmitting.push({
-              tracking, description, redmine, state: 'ignore'
+              tracking, description, redmine, state: 'ignore',
             });
             continue;
           }
@@ -141,12 +145,14 @@ module.exports = class TransmitCommand extends Command {
         }
       }
 
+      this.tracker.debug('Add tracking to transmit list {context}', {}, {issue, description});
       transmitting.push({
-        tracking, issue, description, redmine, state: 'transmit'
+        tracking, issue, description, redmine, state: 'transmit',
       });
     }
 
     if (this.opts.merge) {
+      this.tracker.debug('Start merging {context}', {}, {merge: this.opts.merge});
       /** @type {T_TransmitItem[]} */
       const merged = [];
       for (const transmit of transmitting) {
@@ -154,18 +160,42 @@ module.exports = class TransmitCommand extends Command {
         transmit.customFields = this.getCustomFields(transmit.tracking);
         if (transmit.state !== 'transmit') {
           merged.push(transmit);
+          this.tracker.debug('Ignore tracking {context}', {}, {state: transmit.state});
           continue;
         }
         const index = merged.findIndex(v => v.issue === transmit.issue && v.when.format('DD-MM-YYYY') === transmit.when.format('DD-MM-YYYY') && JSON.stringify(v.customFields || '') === JSON.stringify(transmit.customFields || ''));
         if (index !== -1) {
-          if (merged[index].comment === '') merged[index].comment = await this.getComment(transmit);
+          this.tracker.debug('Try to merge with index {index} {context}', {index}, {issue: transmit.issue});
+          try {
+            if (merged[index].comment === '') merged[index].comment = await this.getComment(transmit);
+          } catch (e) {
+            if (e instanceof RedmineError) {
+              transmit.comment = Color.out('error', e.info());
+              transmit.error = e;
+              transmit.state = 'error';
+              continue;
+            } else {
+              throw e;
+            }
+          }
           const hours = this.getHours(transmit.tracking);
           merged[index].hours += hours;
           merged[index].info.push(hours);
           merged[index].merged.push(transmit.tracking);
         } else {
+          this.tracker.debug('Try to add with index {index} {context}', {index: merged.length}, {issue: transmit.issue});
           transmit.hours = this.getHours(transmit.tracking);
-          transmit.comment = await this.getComment(transmit);
+          try {
+            transmit.comment = await this.getComment(transmit);
+          } catch (e) {
+            if (e instanceof RedmineError) {
+              transmit.comment = Color.out('error', e.info());
+              transmit.error = e;
+              transmit.state = 'error';
+            } else {
+              throw e;
+            }
+          }
           transmit.info = [transmit.hours];
           transmit.merged = [transmit.tracking];
           merged.push(transmit);
@@ -198,6 +228,7 @@ module.exports = class TransmitCommand extends Command {
    * @returns {Moment.Moment}
    */
   getWhen(tracking) {
+    this.tracker.debug('Get when from tracking {context}', {}, {start: tracking.start});
     return Moment.unix(Strtotime(tracking.start));
   }
 
@@ -207,6 +238,7 @@ module.exports = class TransmitCommand extends Command {
    * @returns {number}
    */
   getHours(tracking, total = false) {
+    this.tracker.debug('Get when from tracking {context}', {}, {duration: tracking.duration, total});
     return Math.round(tracking.duration / 36) / 100;
   }
 
@@ -250,6 +282,8 @@ module.exports = class TransmitCommand extends Command {
    * @param {T_TransmitItem[]} transmitting
    */
   async doTransmit(transmitting) {
+    this.tracker.debug('Start grouping, visualize and transmitting');
+    this.tracker.debug('Start grouping');
     /** @type {Object<string, T_TransmitItem[]>} */
     const grouped = {};
     for (const transmit of transmitting) {
@@ -270,6 +304,8 @@ module.exports = class TransmitCommand extends Command {
       info: 'Info',
     });
 
+    this.tracker.debug('Start visualize header: {context}', {}, header);
+
     const table = new CLITable(header);
     for (const day in grouped) {
       table.add([], [this.colorGreen('Date:'), this.colorGreen(day)]);
@@ -277,7 +313,17 @@ module.exports = class TransmitCommand extends Command {
       let totalSkipped = 0;
       let total = 0;
       for (const transmit of items) {
-        transmit.comment = transmit.comment ?? await this.getComment(transmit);
+        try {
+          transmit.comment = transmit.comment ?? await this.getComment(transmit);
+        } catch (e) {
+          if (e instanceof RedmineError) {
+            transmit.comment = Color.out('error', e.info());
+            transmit.error = e;
+            transmit.state = 'error';
+          } else {
+            throw e;
+          }
+        }
         transmit.hours = this.preprocessHours(transmit.hours ?? this.getHours(transmit.tracking));
         transmit.activity = this.tracker.config.get('redmine.' + transmit.redmine.project + '.activity', 9);
         transmit.when = transmit.when || this.getWhen(transmit.tracking);
@@ -308,6 +354,7 @@ module.exports = class TransmitCommand extends Command {
         ['Total:', this.getShowHours(total) + ' (' + this.getTime(total) + ')'],
       );
     }
+    this.tracker.debug('Log Table {context}', {}, {dry: this.opts.dry, yes: this.opts.yes});
     table.log();
     if (this.opts.dry) return;
     if (!this.opts.yes) {
@@ -318,8 +365,10 @@ module.exports = class TransmitCommand extends Command {
       }
     } 
     
+    this.tracker.debug('Start transmitting');
     const errors = [];
     for (const day in grouped) {
+      this.tracker.debug('Start transmitting day {day}', {day});
       console.log();
       console.log('Transmit day ' + day + ' ...');
       for (const transmit of grouped[day]) {
@@ -363,7 +412,11 @@ module.exports = class TransmitCommand extends Command {
    * @returns {array}
    */
   getCustomFields(tracking) {
-    if (tracking.tags === undefined) return [];
+    if (tracking.tags === undefined) {
+      this.tracker.debug('No customfields for tracking because no tags {context}', {}, {id: tracking.id});
+      return [];
+    }
+    this.tracker.debug('Get customfields from tracking {context}', {}, {id: tracking.id, tags: tracking.tags.join(', ')});
     const customFields = [];
     const id = 3;
     const name = 'Abrechnung';
@@ -410,6 +463,7 @@ module.exports = class TransmitCommand extends Command {
   }
 
   async initTags(workspace) {
+    this.tracker.debug('Check workspace tags {context}', {}, {workspace});
     const tags = ['t:transmitted', 't:no-transmit', 't:te:billable', 't:te:nonbillable', 't:te:pauschal'];
     const items = await this.toggl.getWorkspaceTags(workspace);
 
@@ -420,6 +474,7 @@ module.exports = class TransmitCommand extends Command {
       }
     }
     for (const tag of tags) {
+      this.tracker.debug('Try to create workspace tag. {context}', {}, {workspace, tag});
       await this.toggl.createWorkspaceTag(workspace, tag);
       console.log('Created tag "' + tag + '" in workspace "' + workspace + '"');
     }

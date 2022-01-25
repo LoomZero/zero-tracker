@@ -6,6 +6,8 @@ const RedmineConnector = require('./connector/RedmineConnector');
 const JSONFile = require('zero-kit/src/util/JSONFile');
 const Zero = require('zero-kit');
 const Color = require('zero-kit/src/cli/Color');
+const ZeroError = require('zero-kit/src/error/ZeroError');
+const Reflection = require('zero-kit/src/util/Reflection');
 
 module.exports = class Tracker {
 
@@ -19,6 +21,7 @@ module.exports = class Tracker {
     this._config = null;
     this._toggl = null;
     this._redmine = {};
+    this.isDebug = false;
 
     Zero.setApp('tracker', 'zero-tracker', this);
     Zero.setup();
@@ -65,25 +68,62 @@ module.exports = class Tracker {
   }
 
   /**
+   * Check if a fallback redmine connections is created
+   */
+  checkRedmine() {
+    if (!this.config.get('redmine.fallback.api.apiKey')) {
+      Color.log('error', 'Please create a fallback redmine connection.');
+      Color.log('error', 'Use "{command}" to create a connection.', {command: 'tracker redmine add'});
+      throw new ZeroError('Please create a fallback redmine connection.', {redmines: this.config.get('redmine')});
+    }
+  }
+
+  /**
    * @returns {RedmineConnector}
    */
   async getRedmine(project = 'fallback') {
-    if (!this.config.get('redmine.' + project + '.api')) {
-      project = 'fallback';
+    this.checkRedmine();
+
+    const redmines = this.config.get('redmine');
+
+    let redmine = null;
+    for (const id in redmines) {
+      if (id === project || redmines[id].alias.includes(project)) {
+        redmine = id;
+        break;
+      }
     }
-    if (this._redmine[project] === undefined) {
-      this._redmine[project] = new RedmineConnector(this, project);
-      await this._redmine[project].init();
+
+    if (redmine === null) redmine = 'fallback';
+
+    if (this._redmine[redmine] === undefined) {
+      this._redmine[redmine] = new RedmineConnector(this, redmine);
+      await this._redmine[redmine].init();
     }
-    return this._redmine[project];
+    return this._redmine[redmine];
   }
 
   async execute() {
+    const argv = process.argv;
+
+    program
+      .option('--debug', 'Set log level to debug.');
+    
+    if (argv.find(v => v === '--debug') === '--debug') {
+      this.isDebug = true;
+      Zero.setDebugHandler();
+      Zero.handler.on('debug:event', (event, ...args) => {
+        this.debug('Execute event: {event} {context}', {
+          event,
+        }, args);
+      });
+    }
+
+    Zero.handler.emit('boot', program, argv);
+
     for (const command in this.commands) {
       this.commands[command].doInit(program);
     }
-
-    const argv = process.argv;
 
     Zero.handler.emit('init', program, argv);
 
@@ -115,6 +155,14 @@ module.exports = class Tracker {
     console.log();
     Zero.handler.emit('error', error);
     throw error;
+  }
+
+  debug(message, placeholders = {}, context = {}) {
+    if (this.isDebug) {
+      placeholders.context = JSON.stringify(Reflection.debugContext(context));
+      // placeholders.context = JSON.stringify(placeholders.context);
+      console.log(Color.out('debug.title', ' DEBUG '), Color.out('debug', message, placeholders));
+    }
   }
 
 }

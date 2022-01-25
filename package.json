@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "bin": {
-    "tracker2": "bin/tracker.js"
+    "tracker": "bin/tracker.js"
   },
   "main": "index.js",
   "scripts": {

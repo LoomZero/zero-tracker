@@ -108,4 +108,10 @@
  * @property {T_RedmineID[]} roles
  */
 
+/**
+ * @typedef {Object} T_RedmineError
+ * @property {number} ErrorCode
+ * @property {string} Message
+ */
+
 module.exports = {};

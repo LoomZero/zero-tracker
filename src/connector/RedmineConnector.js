@@ -1,5 +1,6 @@
 const Connector = require('../Connector');
 const Redmine = require('node-redmine');
+const RedmineError = require('../error/RedmineError');
 
 module.exports = class RedmineConnector extends Connector {
 
@@ -30,6 +31,17 @@ module.exports = class RedmineConnector extends Connector {
   }
 
   /**
+   * @param {string} error 
+   * @returns {import('../../types').T_RedmineError}
+   */
+  getError(error) { 
+    if (typeof error === 'string') {
+      return JSON.parse(error);
+    }
+    return error;
+  }
+
+  /**
    * @param {string} items 
    * @param {string} func 
    * @param  {...any} args 
@@ -56,7 +68,15 @@ module.exports = class RedmineConnector extends Connector {
    */
   getIssue(id) {
     if (typeof id === 'string') id = Number.parseInt(id);
-    return this.promise('get_issue_by_id', id, {}).then(issue => issue.issue);
+    return this.promise('get_issue_by_id', id, {}).then(issue => issue.issue).catch(err => {
+      const error = this.getError(err);
+      switch (error.ErrorCode) {
+        case 404: 
+          throw new RedmineError(error, 'Issue not found.', {id});
+        default:
+          throw new RedmineError(error, 'Unknown Error: ' + error.Message, {id});
+      }
+    });
   }
 
   /**

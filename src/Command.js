@@ -33,6 +33,8 @@ module.exports = class Command {
   async doAction(...args) {
     this.instance = args.pop();
     this.opts = args.pop();
+    this.tracker.debug('Args: {context}', {}, args);
+    this.tracker.debug('Opts: {context}', {}, this.opts);
 
     try {
       Zero.handler.emit('action', this.command, this, args);

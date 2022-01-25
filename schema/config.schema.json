@@ -30,9 +30,13 @@
           },
           "hostname": {"type": "string"},
           "port": {"type": ["string", "integer"]},
-          "activity": {"type": "integer"}
+          "id": {"type": "string"},
+          "alias": {
+            "type": "array", 
+            "items": {"type": "string"}
+          }
         },
-        "required": ["name", "api", "hostname", "port"]
+        "required": ["name", "api", "hostname", "port", "id", "alias"]
       }
     },
     "commands": {

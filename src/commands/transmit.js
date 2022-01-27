@@ -467,7 +467,7 @@ module.exports = class TransmitCommand extends Command {
     const tags = ['t:transmitted', 't:no-transmit', 't:te:billable', 't:te:nonbillable', 't:te:pauschal'];
     const items = await this.toggl.getWorkspaceTags(workspace);
 
-    for (const item of items) {
+    for (const item of (items || [])) {
       const index = tags.findIndex((v) => v === item.name);
       if (index !== -1) {
         tags.splice(index, 1);

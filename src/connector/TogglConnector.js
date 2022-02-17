@@ -105,4 +105,11 @@ module.exports = class TogglConnector extends Connector {
     return this.promise('updateTimeEntry', id, data);
   }
 
+  /**
+   * @returns {Promise<import('../../types').T_TogglTracking>}
+   */
+  getCurrent() {
+    return this.promise('getCurrentTimeEntry');
+  }
+
 }

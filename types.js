@@ -79,6 +79,7 @@
  * @property {T_RedmineID} project
  * @property {T_RedmineID} status
  * @property {T_RedmineID} [assigned_to]
+ * @property {T_RedmineID} author
  * @property {string} subject
  * @property {string} description
  */
@@ -112,6 +113,34 @@
  * @typedef {Object} T_RedmineError
  * @property {number} ErrorCode
  * @property {string} Message
+ */
+
+/**
+ * @typedef {Object} T_RedmineIssueFilter
+ * @property {(string|number|string[]|number[])} [issue] alias for issue_id
+ * @property {string} [issue_id] get issue with the given id or multiple issues by id using ',' to separate id
+ * @property {(string|T_RedmineID)} [project] alias for project_id
+ * @property {string} [project_id] get issues from the project with the given id (a numeric value, not a project identifier)
+ * @property {number} [tracker_id] get issues from the tracker with the given id
+ * @property {(number|string)} [status_id] get issues with the given status id only. Possible values: open, closed, * to get open and closed issues, status id
+ * @property {(number|string)} [assigned_to_id] get issues which are assigned to the given user id. me can be used instead an ID to fetch all issues from the logged in user (via API key or HTTP auth)
+ * @property {number} [parent_id] get issues whose parent issue is given id.
+ * @property {number} [limit] number of issues per page
+ * @property {string} [sort] column to sort with. Append :desc to invert the order. Options: updated_on, ...
+ * @property {string} [subject] search for the subject. Use the prefix '~' to search with containing string.
+ */
+
+/**
+ * @typedef {Object} T_ConnectorRequest
+ * @property {string} func
+ * @property {any[]} args
+ */
+
+/**
+ * @typedef {Object} T_RedmineConnectorResponse
+ * @property {number} limit
+ * @property {number} offset
+ * @property {number} total_count
  */
 
 module.exports = {};

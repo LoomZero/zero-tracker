@@ -6,7 +6,7 @@ const RedmineConnector = require('./connector/RedmineConnector');
 const JSONFile = require('zero-kit/src/util/JSONFile');
 const Zero = require('zero-kit');
 const Color = require('zero-kit/src/cli/Color');
-const ZeroError = require('zero-kit/src/error/ZeroError');
+const TrackerError = require('./error/TrackerError');
 const Reflection = require('zero-kit/src/util/Reflection');
 
 module.exports = class Tracker {
@@ -19,11 +19,20 @@ module.exports = class Tracker {
 
     this._commands = null;
     this._config = null;
+    this._config_actions = null;
     this._toggl = null;
     this._redmine = {};
     this.isDebug = false;
 
     Zero.setApp('tracker', 'zero-tracker', this);
+
+    Zero.handler.on('setup', () => {
+      this.config.load();
+      this.config.save();
+      this.configActions.load();
+      this.configActions.save();
+    });
+
     Zero.setup();
   }
 
@@ -33,6 +42,14 @@ module.exports = class Tracker {
       this._config = new JSONFile(Zero.storage.path('config.json'));
     }
     return this._config;
+  }
+
+  /** @returns {JSONFile} */
+  get configActions() {
+    if (this._config_actions === null) {
+      this._config_actions = new JSONFile(Zero.storage.path('actions.json'));
+    } 
+    return this._config_actions;
   }
 
   /** @returns {Object<string, import('./Command')>} */
@@ -74,7 +91,7 @@ module.exports = class Tracker {
     if (!this.config.get('redmine.fallback.api.apiKey')) {
       Color.log('error', 'Please create a fallback redmine connection.');
       Color.log('error', 'Use "{command}" to create a connection.', {command: 'tracker redmine add'});
-      throw new ZeroError('Please create a fallback redmine connection.', {redmines: this.config.get('redmine')});
+      throw new TrackerError('tracker.redmine.connection.fallback', 'Please create a fallback redmine connection.', {redmines: this.config.get('redmine')});
     }
   }
 
@@ -111,11 +128,22 @@ module.exports = class Tracker {
     
     if (argv.find(v => v === '--debug') === '--debug') {
       this.isDebug = true;
-      Zero.setDebugHandler();
-      Zero.handler.on('debug:event', (event, ...args) => {
-        this.debug('Execute event: {event} {context}', {
-          event,
-        }, args);
+      Zero.setDebugHandler((event, ...args) => {
+        switch (event) {
+          case 'cache.clear':
+          case 'kit.input':
+          case 'exit':
+            this.debug('Execute event: {event} {param}', {
+              event,
+              param: JSON.stringify(args[0]),
+            });
+            break;
+          default:
+            this.debug('Execute event: {event} {context}', {
+              event,
+            }, args);
+            break;
+        }
       });
     }
 
@@ -135,7 +163,7 @@ module.exports = class Tracker {
   }
 
   exit() {
-    Zero.handler.emit('exit');
+    Zero.handler.emit('exit', {reason: 'tracker.exit'});
     process.exit(0);
   }
 

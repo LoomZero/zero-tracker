@@ -1,6 +1,7 @@
 const Connector = require('../Connector');
 const Redmine = require('node-redmine');
 const RedmineError = require('../error/RedmineError');
+const Zero = require('zero-kit');
 
 module.exports = class RedmineConnector extends Connector {
 
@@ -22,6 +23,9 @@ module.exports = class RedmineConnector extends Connector {
     }
     return this._api;
   }
+
+  /** @returns {import('../../types').T_RedmineConnectorResponse} */
+  get response() { return this._response }
 
   /**
    * @return {string}
@@ -48,18 +52,17 @@ module.exports = class RedmineConnector extends Connector {
    * @returns {*}
    */
   async promiseAll(items, func, ...args) {
-    const cid = items + '::' + func;
-    if (this._cache[cid] !== undefined) return this._cache[cid];
-    /** @type {import('../types').T_RedminePagingOptions} */
+    /** @type {import('../../types').T_RedminePagingOptions} */
     const options = args[args.length - 1];
-    this._cache[cid] = [];
+    const offset = options.offset || 0;
+    let values = [];
     let response = null;
     do {
-      options.offset = this._cache[cid].length;
+      options.offset = offset + values.length;
       response = await this.promise(func, ...args);
-      this._cache[cid] = this._cache[cid].concat(response[items]);
-    } while (this._cache[cid].length < response.total_count);
-    return this._cache[cid];
+      values = values.concat(response[items]);
+    } while (values.length < (options.limit ?? response.total_count) && values.length + offset < response.total_count);
+    return values;
   }
 
   /**
@@ -72,9 +75,9 @@ module.exports = class RedmineConnector extends Connector {
       const error = this.getError(err);
       switch (error.ErrorCode) {
         case 404: 
-          throw new RedmineError(error, 'Issue not found.', {id});
+          throw new RedmineError('tracker.redmine.notfound', error, 'Issue {id} not found.', {id});
         default:
-          throw new RedmineError(error, 'Unknown Error: ' + error.Message, {id});
+          throw new RedmineError('tracker.redmine.unknown', error, 'Unknown Error: ' + error.Message, {id});
       }
     });
   }
@@ -105,7 +108,7 @@ module.exports = class RedmineConnector extends Connector {
         issue.assigned_to_id = issue.assigned;
       } else if (typeof issue.assigned === 'string') {
         const loadIssue = await this.getIssue(id);
-        issue.assigned_to_id = (await this.getMemberships(loadIssue.project.id)).find(v => v.user.name === issue.assigned).user.id;
+        issue.assigned_to_id = (await this.getMemberships(loadIssue.project.id)).find(v => v.user && v.user.name === issue.assigned || v.group && v.group.name === issue.assigned).user.id;
       } else {
         issue.assigned_to_id = issue.assigned.id;
       }
@@ -151,12 +154,11 @@ module.exports = class RedmineConnector extends Connector {
    * @returns {Promise<import('../../types').T_RedmineProject[]>}
    */
   listProjects() {
-    return this.promiseAll('projects', 'projects', {});
+    return Zero.storage.cache('redmine_listprojects', ['redmine.response.listProjects'], async () => {
+      return await this.promiseAll('projects', 'projects', {});
+    }, {days: 5}).get();
   }
 
-  /**
-   * 
-   */
   async getProjectTree() {
     if (this._cache['projects::tree'] !== undefined) return this._cache['projects::tree'];
     this._cache['projects::tree'] = [];
@@ -184,12 +186,47 @@ module.exports = class RedmineConnector extends Connector {
   }
 
   /**
-   * @param {(number|string)} projectid 
-   * @param {Promise<import('../../types').T_RedminePagingOptions} param 
+   * @param {(number|string|import('../../types').T_RedmineID)} project 
+   */
+  async getRootProject(project) {
+    const projects = await this.listProjects();
+
+    let root = projects.find(v => {
+      if (typeof project === 'number') {
+        return v.id === project;
+      } else if (typeof project === 'string') {
+        return v.name === project;
+      } else {
+        return v.id === project.id;
+      }
+    });
+
+    while (root.parent) {
+      root = projects.find(v => v.id === root.parent.id);
+    }
+    return root;
+  }
+
+  /**
+   * @param {(number|string|import('../../types').T_RedmineID)} projectid 
+   * @param {import('../../types').T_RedminePagingOptions} param 
    * @returns {Promise<import('../../types').T_RedmineMembership[]>}
    */
   getMemberships(projectid, param = {}) {
+    if (typeof projectid === 'object') projectid = projectid.id;
     return this.promiseAll('memberships', 'membership_by_project_id', projectid, param);
+  }
+
+  normalizeUserName(name) {
+    return name.replace(/é/g, 'e').replace(/ó/g, 'o');
+  }
+
+  /**
+   * @param {import('../../types').T_RedmineIssueFilter} filters 
+   * @returns {Promise<import('../../types').T_RedmineIssue[]>}
+   */
+  searchIssues(filters = {}) {
+    return this.promiseAll('issues', 'issues', filters);
   }
 
 }

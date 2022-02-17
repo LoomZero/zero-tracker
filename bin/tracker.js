@@ -1,7 +1,5 @@
 #!/usr/bin/env node
 
-const program = require('commander');
-const FS = require('fs');
 const Path = require('path');
 const Tracker = require('../src/Tracker');
 

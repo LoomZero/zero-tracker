@@ -29,6 +29,7 @@
     "open": "^8.4.0",
     "string-similarity": "^4.0.4",
     "toggl-api": "^1.0.1",
+    "url-pattern": "^1.0.3",
     "zero-kit": "git+https://github.com/LoomZero/zero-kit.git#master"
   }
 }

@@ -1,0 +1,51 @@
+{
+  "type": "object",
+  "properties": {
+    "change": { "$ref": "#/$defs/action" },
+    "finish": { "$ref": "#/$defs/action" },
+    "take": { "$ref": "#/$defs/action" }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "changes": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "object",
+          "properties": {
+            "name": {"type": "string"},
+            "id": {"type": "number"}
+          },
+          "additionalProperties": false
+        },
+        "assigned": {
+          "type": "object",
+          "properties": {
+            "name": {"type": "string"},
+            "id": {"type": "number"}
+          },
+          "additionalProperties": false
+        },
+        "notes": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "action": {
+      "type": "object",
+      "properties": {
+        "changes": { "$ref": "#/$defs/changes" },
+        "projects": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "changes": { "$ref": "#/$defs/changes" }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

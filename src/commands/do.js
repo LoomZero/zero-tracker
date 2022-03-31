@@ -104,9 +104,10 @@ module.exports = class DoCommand extends Command {
     const ticket = await this.getTicket(url);
     if (ticket === null) return Color.log('section.abort', 'Abort');
 
-    const changes = await this.getChanges(ticket, url);
+    const changes = await this.getConfigChanges(ticket, 'change');
+    await this.getChanges(ticket, url, changes);
     
-    this.logChanges(changes);
+    this.logChanges(ticket, changes);
   }
 
   async action_fix(params) {
@@ -217,43 +218,51 @@ module.exports = class DoCommand extends Command {
           offset: 0,
           limit: 5,
           sort: 'updated_on:desc',
-          subject: '~' + ticket.id,
         },
       };
 
+      if (ticket.id !== 'q') bag.filter.subject = '~' + ticket.id;
+
       const fromMatch = this.match('from', ':project', url, false);
-      const projects = await this.redmine.listProjects();
-      let found = null;
-      if (found = projects.find(v => v.name.toLowerCase().includes(fromMatch.project) || v.identifier.includes(fromMatch.project))) {
-        bag.filter.project_id = found.identifier;
+      if (fromMatch && fromMatch.project) {
+        const projects = (await this.redmine.listProjects()).filter(v => v.name.toLowerCase().includes(fromMatch.project) || v.identifier.includes(fromMatch.project) || fromMatch.project === 'q');
+        const project = await this.getChoose((bag) => {
+          return {
+            title: 'Choose a project {pager}',
+            items: this.getArrayFilter(projects, bag.filter),
+            total_count: projects.length,
+          };
+        }, (item) => {
+          return item.name;
+        }, {filter: {limit: 5}});
+        bag.filter.project_id = project.identifier;
       }
 
-      do {
-        let issues = await this.redmine.searchIssues(bag.filter);
+      const onlyMatch = this.match('only', ':state', url, false);
+      if (onlyMatch && onlyMatch.state) {
+        const states = (await this.getStates()).filter(v => v.name.toLowerCase().includes(onlyMatch.state.toLowerCase()) || onlyMatch.state === 'q');
+        const state = await this.getChoose((bag) => {
+          return {
+            title: 'Choose a state {pager}',
+            items: this.getArrayFilter(states, bag.filter),
+            total_count: states.length,
+          }
+        }, (item) => {
+          return item.name;
+        }, {filter: {limit: 5}});
+        bag.filter.status_id = state.id;
+      }
 
-        const options = {
-          '': 'FIRST',
-          '0': 'MORE',
+      const value = await this.getChoose(async (bag) => {
+        return {
+          title: 'Choose an issue {pager}',
+          items: await this.redmine.searchIssues(bag.filter),
         };
+      }, async (item) => {
+        return '#' + item.id + ' - ' + item.subject + ' [by ' + Color.out('note', item.author.name) + ']';
+      }, bag);
 
-        console.log('Choose an issue:');
-        for (const index in issues) {
-          options[(parseInt(index) + 1) + ''] = issues[index];
-          console.log('  -', (parseInt(index) + 1) + ':', '"' + issues[index].subject + '" [by ' + issues[index].author.name + ']');
-        }
-        console.log('  - 0: More Issues (' + (bag.filter.offset / bag.filter.limit + 1) + '/' + Math.ceil(this.redmine.response.total_count / bag.filter.limit) + ')');
-        let index = await Input.input('Press a number: ', Input.optionsSelect({type: 'read', fallback: ''}, Object.keys(options)));
-
-        if (options[index] === 'FIRST') {
-          index = '1';
-        } else if (options[index] === 'MORE') {
-          bag.filter.offset += bag.filter.limit;
-        }
-        
-        if (typeof options[index] === 'object') bag.result = options[index];
-      } while (!bag.result);
-      
-      ticket.id = bag.result.id;
+      ticket.id = value.id;
     }
 
     try {
@@ -277,12 +286,97 @@ module.exports = class DoCommand extends Command {
   }
 
   /**
+   * @param {any[]} array 
+   * @param {import('../../types').T_RedmineIssueFilter} filter
+   * @returns {any[]}
+   */
+  getArrayFilter(array, filter) { 
+    const values = [];
+    const offset = filter.offset || 0;
+    const limit = filter.limit || Infinity;
+    for (let i = offset; i < array.length && i < offset + limit; i++) {
+      values.push(array[i]);
+    }
+    return values;
+  }
+
+  async getChoose(execute, label, bag) {
+    bag.filter.offset = bag.filter.offset || 0;
+    const up = bag.control && bag.control.up || ['*', '^W', '^A', 'w', 'a'];
+    const down = bag.control && bag.control.down || ['+', '^S', '^D', 's', 'd'];
+    const mask = bag.control && bag.control.mask || /([0-9wasd\+\*\?]|\^W|\^D|\^S|\^A|\^R)/;
+
+    do {
+      bag.values = await execute(bag);
+      if (bag.values.result) {
+        bag.result = bag.values.result;
+        break;
+      }
+
+      const total_count = bag.values.total_count || this.redmine.response.total_count;
+
+      if (total_count === 1) {
+        bag.result = bag.values.items.shift();
+        break;
+      }
+
+      console.clear();
+
+      if (bag.action === '?') {
+        if (bag.values.help) {
+          bag.values.help(bag);
+        } else {
+          Color.log('debug.title', '--- Help ---');
+          Color.log('debug', 'Use "{op}" to show the next page.', {op: down.map(Input.toHumanKey).join(', ')});
+          Color.log('debug', 'Use "{op}" to show the previous page.', {op: up.map(Input.toHumanKey).join(', ')});
+          Color.log('debug', 'Use "{op}" to show this help.', {op: '?'});
+          Color.log('debug', 'Use "{op}" number to choose a item.', {op: '[0-9]'});
+          Color.log('debug.title', '--- /Help ---');
+        }
+      }
+
+      if (!bag.values.before && bag.filter.offset) bag.values.before = '<< SHOW PREV';
+      if (!bag.values.after && bag.filter.offset + bag.filter.limit < total_count) bag.values.after = 'SHOW NEXT >>';
+
+      if (bag.values.title) Color.log('info', bag.values.title + ':', {pager: '(' + (bag.filter.offset / bag.filter.limit + 1) +  '/' + Math.ceil(total_count / bag.filter.limit) + ')'});
+      const options = [];
+      if (bag.values.before) {
+        Color.log('info', '{op}: ' + bag.values.before, {op: '*'});
+      }
+      for (const index in bag.values.items) {
+        const i = parseInt(index);
+        options.push(i + 1);
+        Color.log('info', '{op}: ' + await label(bag.values.items[index]), {op: i + 1});
+      }
+
+      if (bag.values.before) options.push(...up);
+      if (bag.values.after) {
+        Color.log('info', '{op}: ' + bag.values.after, {op: '+'})
+        options.push(...down);
+      }
+      options.push('^R', '?');
+
+      bag.action = await Input.input('Press a key: ', Input.optionsSelect({type: 'read', fallback: '', mask: mask}, options, 'Please use on of this options [' + options.join(', ') + '].\nUse "?" for more help.'));
+
+      if (down.includes(bag.action)) {
+        bag.filter.offset += bag.filter.limit;
+      } else if (up.includes(bag.action)) {
+        bag.filter.offset -= bag.filter.limit;
+      }
+
+      if (bag.action === '^R') bag.action = 1;
+      if (this.isInt(bag.action) && bag.values.items[parseInt(bag.action) - 1]) bag.result = bag.values.items[parseInt(bag.action) - 1];
+    } while (!bag.result);
+    return bag.result;
+  }
+
+  /**
    * @param {import('../../types').T_RedmineIssue} ticket 
    * @param {string} url 
    * @param {import('../../types').T_RedmineUpdateIssue} changes
    */
   async getChanges(ticket, url, changes = {}) {
-    const toMatches = this.match(['give/to', 'to'], ':value', url, true);
+    const toMatches = this.match(['give', 'to'], ':value', url, true);
     if (toMatches) {
       await this.getToChanges(changes, ticket, toMatches);
     }
@@ -318,7 +412,6 @@ module.exports = class DoCommand extends Command {
    * @param {Object[]} matches 
    */
   async getToChanges(changes, ticket, matches) {
-    /** @type {import('../../types').T_RedmineUpdateIssue} */
     const states = await this.getStates();
     const users = await this.getUsers(ticket);
 

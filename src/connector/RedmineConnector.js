@@ -69,9 +69,9 @@ module.exports = class RedmineConnector extends Connector {
    * @param {number} id 
    * @returns {Promise<import('../../types').T_RedmineIssue>}
    */
-  getIssue(id) {
+  getIssue(id, options = {}) {
     if (typeof id === 'string') id = Number.parseInt(id);
-    return this.promise('get_issue_by_id', id, {}).then(issue => issue.issue).catch(err => {
+    return this.promise('get_issue_by_id', id, options).then(issue => issue.issue).catch(err => {
       const error = this.getError(err);
       switch (error.ErrorCode) {
         case 404: 

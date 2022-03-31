@@ -27,12 +27,15 @@ module.exports = class Connector {
   promise(func, ...args) {
     this._request = { func, args };
     this._response = null;
-    this.tracker.debug(this.constructor.name + ' call ' + func + ' {context}', {}, args);
+    this.tracker.debug(this.constructor.name + ' call ' + func + ' {args}', {
+      args: JSON.stringify(args).replace(/\\"/g, '"'),
+    });
     return new Promise((res, rej) => {
       this.api[func](...args, (error, response) => {
-        this.tracker.debug(this.constructor.name + ' call ' + func + ' {context} response: {response}', {
+        this.tracker.debug(this.constructor.name + ' call ' + func + ' {args} response: {response}', {
           response: response ? JSON.stringify(response).replace(/\\"/g, '"') : '',
-        }, args);
+          args: JSON.stringify(args).replace(/\\"/g, '"'),
+        });
         this._response = response;
         error ? rej(error) : res(response);
       });

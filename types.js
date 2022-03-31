@@ -74,6 +74,23 @@
  */
 
 /**
+ * @typedef {Object} T_RedmineJournalDetail
+ * @property {string} name
+ * @property {string} new_value
+ * @property {string} old_value
+ * @property {string} property
+ */
+
+/**
+ * @typedef {Object} T_RedmineJournal
+ * @property {string} created_on
+ * @property {T_RedmineJournalDetail[]} details
+ * @property {number} id
+ * @property {string} notes
+ * @property {T_RedmineID} user 
+ */
+
+/**
  * @typedef {Object} T_RedmineIssue
  * @property {number} id
  * @property {T_RedmineID} project
@@ -82,6 +99,7 @@
  * @property {T_RedmineID} author
  * @property {string} subject
  * @property {string} description
+ * @property {T_RedmineJournal[]} [journals] only available when option {include: 'journals'}
  */
 
 /**
@@ -126,6 +144,7 @@
  * @property {(number|string)} [assigned_to_id] get issues which are assigned to the given user id. me can be used instead an ID to fetch all issues from the logged in user (via API key or HTTP auth)
  * @property {number} [parent_id] get issues whose parent issue is given id.
  * @property {number} [limit] number of issues per page
+ * @property {number} [offset]
  * @property {string} [sort] column to sort with. Append :desc to invert the order. Options: updated_on, ...
  * @property {string} [subject] search for the subject. Use the prefix '~' to search with containing string.
  */

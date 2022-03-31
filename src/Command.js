@@ -49,7 +49,7 @@ module.exports = class Command {
   async action() {}
 
   isInt(value) {
-    return Number.parseInt(value) + '' === value;
+    return Number.parseInt(value) + '' === value + '';
   }
 
 }

@@ -21,7 +21,7 @@ module.exports = class Connector {
     return new Promise((res, rej) => {
       this.api[func](...args, (error, response) => {
         this.tracker.debug(this.constructor.name + ' call ' + func + ' {context} response: {response}', {
-          response: JSON.stringify(response).replace(/\\"/g, '"'),
+          response: typeof response === 'string' ? JSON.stringify(response).replace(/\\"/g, '"') : response,
         }, args);
         error ? rej(error) : res(response);
       });

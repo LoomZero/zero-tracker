@@ -4,7 +4,7 @@
 - [3. - Uninstall](#3---uninstall)
 - [4. - Change Config](#4---change-config)
   - [4.1. - Add default option for command](#41---add-default-option-for-command)
-- [5. - Add Redmine Connection](#5---add-redmine-connection)
+- [5. - Add Redmine Connection (Currently not supported while server tracker is active)](#5---add-redmine-connection-currently-not-supported-while-server-tracker-is-active)
   - [5.1. - Add another Redmine Connection via project](#51---add-another-redmine-connection-via-project)
 - [6. - COMMAND: `config <action>` - Manage configs](#6---command-config-action---manage-configs)
   - [6.1. - ARGUMENT: `edit` - Show the path to the config file](#61---argument-edit---show-the-path-to-the-config-file)
@@ -23,7 +23,7 @@
   - [10.3. - OPTION: `--workspace <workspaceid>` - The workspice ID](#103---option---workspace-workspaceid---the-workspice-id)
   - [10.4. - OPTION: `--dry` - Execute the command without transmit](#104---option---dry---execute-the-command-without-transmit)
   - [10.5. - OPTION: `--round <minutes>` - Round to minutes](#105---option---round-minutes---round-to-minutes)
-  - [10.6. - OPTION: `--roundmin <minutes>` - Define the minutes where there is no rounding](#106---option---roundmin-minutes---define-the-minutes-where-there-is-no-rounding)
+  - [10.6. - OPTION: `--roundmin <minutes>` - Only round over defined minutes](#106---option---roundmin-minutes---only-round-over-defined-minutes)
   - [10.7. - OPTION: `--merge` - Merge the trackings per day](#107---option---merge---merge-the-trackings-per-day)
   - [10.8. - OPTION: `-f, --force <forceoption>` - Force the execution](#108---option--f---force-forceoption---force-the-execution)
   - [10.9. - OPTION: `-y, --yes` - Accept the transmit](#109---option--y---yes---accept-the-transmit)
@@ -99,8 +99,13 @@ _Example: config.json - Use `transmit` command always with `round=30` and `merge
   ...
 }
 ```
+Equals:
 
-# 5. - Add Redmine Connection
+```shell
+tracker transmit --round 30 --merge
+```
+
+# 5. - Add Redmine Connection (Currently not supported while server tracker is active)
 
 ```shell
 tracker redmine add
@@ -213,7 +218,7 @@ _If used with `--merge` the round will perform after the merge_
 
 > Default: `15`
 
-## 10.6. - OPTION: `--roundmin <minutes>` - Define the minutes where there is no rounding
+## 10.6. - OPTION: `--roundmin <minutes>` - Only round over defined minutes
 
 Define the minutes where there is no rounding.
 

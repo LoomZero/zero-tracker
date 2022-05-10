@@ -53,6 +53,7 @@
                 "workspace": {"type": "string"},
                 "mode": {"enum": ["normal"]},
                 "round": {"type": "integer"},
+                "roundmin": {"type": "integer"},
                 "merge": {"type": "boolean"},
                 "yes": {"type": "boolean"},
                 "force": {"enum": ["skip", "ignore"]}

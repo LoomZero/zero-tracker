@@ -31,12 +31,13 @@ module.exports = class TransmitCommand extends Command {
   init(program) {
     return program
       .command('transmit')
-      .option('--from <from>', 'Enter a date string for from', this.fallback('from', '-1 days'))
+      .option('--from <from>', 'Enter a date string for from', this.fallback('from', '-1 week'))
       .option('--to <to>', 'Enter a date string for to', this.fallback('to', 'now'))
       .option('--workspace <workspace>', 'Enter a workspace id', this.fallback('workspace', 'first'))
       .option('--mode <mode>', 'Enter a mode', this.fallback('mode', 'normal'))
       .option('--dry', 'Dry run', false)
-      .option('--round <round>', 'Round to x min', this.fallback('round', false))
+      .option('--round <round>', 'Round to x min', this.fallback('round', 15))
+      .option('--roundmin <min>', 'Round when >= x min', this.fallback('roundmin', 5))
       .option('--merge', 'Merge tickets hours', this.fallback('merge', false))
       .option('-f, --force <force>', 'Force the unknown issue to a state (Allowed: skip (s), ignore (i))', this.fallback('force', false))
       .option('-y, --yes', 'Accept the transmit', this.fallback('yes', false))
@@ -248,6 +249,7 @@ module.exports = class TransmitCommand extends Command {
    */
   preprocessHours(hours) {
     if (this.opts.round) {
+      if (this.opts.roundmin && hours < Number.parseInt(this.opts.roundmin) / 60) return hours;
       const round = Number.parseInt(this.opts.round) / 60;
       const rounded = hours / round;
 
@@ -386,7 +388,7 @@ module.exports = class TransmitCommand extends Command {
             console.log(this.colorGreen('transmitted'));
           } catch (error) {
             Color.log('error', 'Error WIP');
-            errors.push({error, transmit});
+            errors.push({ error, transmit });
           }
         } else {
           console.log(transmit.state.toUpperCase() + ': ' + (transmit.issue ? transmit.issue : '<no issue>') + ' - ' + (transmit.comment ? transmit.comment : '<no comment>') + ' - ' + this.getTime(transmit.hours));

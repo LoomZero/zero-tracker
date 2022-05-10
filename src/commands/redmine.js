@@ -26,7 +26,7 @@ module.exports = class RedmineCommand extends Command {
         return await this.remove();
       default:
         Color.log('error', 'Invalid argument <action>');
-        Color.log('error', 'Valid options are: {options}', {options: 'show, add, remove'});
+        Color.log('error', 'Valid options are: {options}', { options: 'show, add, remove' });
         break;
     }
   }
@@ -35,7 +35,7 @@ module.exports = class RedmineCommand extends Command {
     const projects = this.tracker.config.get('redmine');
 
     const table = new CLITable({
-      name: 'Name',
+      name: 'Name', 
       id: 'ID (Project)',
       apiKey: 'API Key',
       hostname: 'Hostname',

@@ -23,10 +23,11 @@
   - [10.3. - OPTION: `--workspace <workspaceid>` - The workspice ID](#103---option---workspace-workspaceid---the-workspice-id)
   - [10.4. - OPTION: `--dry` - Execute the command without transmit](#104---option---dry---execute-the-command-without-transmit)
   - [10.5. - OPTION: `--round <minutes>` - Round to minutes](#105---option---round-minutes---round-to-minutes)
-  - [10.6. - OPTION: `--merge` - Merge the trackings per day](#106---option---merge---merge-the-trackings-per-day)
-  - [10.7. - OPTION: `-f, --force <forceoption>` - Force the execution](#107---option--f---force-forceoption---force-the-execution)
-  - [10.8. - OPTION: `-y, --yes` - Accept the transmit](#108---option--y---yes---accept-the-transmit)
-  - [10.9. - CONFIG: `output` - Define the output Table](#109---config-output---define-the-output-table)
+  - [10.6. - OPTION: `--roundmin <minutes>` - Define the minutes where there is no rounding](#106---option---roundmin-minutes---define-the-minutes-where-there-is-no-rounding)
+  - [10.7. - OPTION: `--merge` - Merge the trackings per day](#107---option---merge---merge-the-trackings-per-day)
+  - [10.8. - OPTION: `-f, --force <forceoption>` - Force the execution](#108---option--f---force-forceoption---force-the-execution)
+  - [10.9. - OPTION: `-y, --yes` - Accept the transmit](#109---option--y---yes---accept-the-transmit)
+  - [10.10. - CONFIG: `output` - Define the output Table](#1010---config-output---define-the-output-table)
 
 # 1. - Install
 
@@ -170,7 +171,7 @@ Define the startpoint of the transmit range.
 
 > Type: `string`
 
-> Default: `-1 days`
+> Default: `-1 week`
 
 ## 10.2. - OPTION: `--to <moment>` - Range end
 
@@ -210,9 +211,21 @@ _If used with `--merge` the round will perform after the merge_
 
 > Type: `boolean, int`
 
-> Default: `false`
+> Default: `15`
 
-## 10.6. - OPTION: `--merge` - Merge the trackings per day
+## 10.6. - OPTION: `--roundmin <minutes>` - Define the minutes where there is no rounding
+
+Define the minutes where there is no rounding.
+
+_Only takes effect with option `--round`_ 
+
+> Config: `commands.transmit.opts.roundmin`
+
+> Type: `boolean, int`
+
+> Default: `5`
+
+## 10.7. - OPTION: `--merge` - Merge the trackings per day
 
 Merge trackings by id, only per day.
 
@@ -222,7 +235,7 @@ Merge trackings by id, only per day.
 
 > Default: `false`
 
-## 10.7. - OPTION: `-f, --force <forceoption>` - Force the execution
+## 10.8. - OPTION: `-f, --force <forceoption>` - Force the execution
 
 Force the execution to `skip` or `ignore` all undefined trackings.
 
@@ -236,7 +249,7 @@ Use `--force ignore (-f i)` to ignore all trackings that have no ticket IDs.
 
 > Default: `false`
 
-## 10.8. - OPTION: `-y, --yes` - Accept the transmit
+## 10.9. - OPTION: `-y, --yes` - Accept the transmit
 
 Transmit the trackings without asking.
 
@@ -246,7 +259,7 @@ Transmit the trackings without asking.
 
 > Default: `false`
 
-## 10.9. - CONFIG: `output` - Define the output Table
+## 10.10. - CONFIG: `output` - Define the output Table
 
 This change the output table. You can remove or rename columns.
 

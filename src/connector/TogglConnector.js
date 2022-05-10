@@ -56,6 +56,13 @@ module.exports = class TogglConnector extends Connector {
   }
 
   /**
+   * @returns {Promise<import('../../types').T_TogglTracking>}
+   */
+  getCurrentTimeEntry() {
+    return this.promise('getCurrentTimeEntry');
+  }
+
+  /**
    * @returns {Promise<import('../../types').T_TogglWorkspace[]>}
    */
   getWorkspaces() {
